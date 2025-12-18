@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import uuid
 from datetime import datetime
@@ -13,8 +16,6 @@ import random
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
-import eventlet
-eventlet.monkey_patch()
 load_dotenv()
 
 from routes.ai_routes import ai_bp
@@ -652,4 +653,5 @@ app.register_blueprint(call_bp)
 if __name__ == "__main__":
     print("🚀 Server running at: http://127.0.0.1:5000")
     socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+
 
