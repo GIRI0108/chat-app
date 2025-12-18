@@ -642,8 +642,10 @@ def handle_game_start(data):
 
 
 # Initialize DB
-with app.app_context():
-    db.create_all()
+if os.getenv("RENDER") != "true":
+    with app.app_context():
+        db.create_all()
+
 
 app.register_blueprint(ai_bp, url_prefix="/api/ai")
 app.register_blueprint(private_room)
@@ -654,6 +656,7 @@ app.register_blueprint(call_bp)
 if __name__ == "__main__":
     print("🚀 Server running at: http://127.0.0.1:5000")
     socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+
 
 
 
