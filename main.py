@@ -1,5 +1,3 @@
-import eventlet
-eventlet.monkey_patch()
 
 import os
 import uuid
@@ -64,7 +62,7 @@ private_rooms = {}
 
 from extensions import db
 db.init_app(app)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='Threading')
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -653,5 +651,6 @@ app.register_blueprint(call_bp)
 if __name__ == "__main__":
     print("🚀 Server running at: http://127.0.0.1:5000")
     socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+
 
 
