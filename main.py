@@ -35,7 +35,10 @@ app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024  # 30MB
 
 client = OpenAI(api_key=os.getenv("AI_API_KEY"))
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg://postgres:admin@localhost:5433/app_1'
+import os
+
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_pre_ping": True,
 }
@@ -651,6 +654,7 @@ app.register_blueprint(call_bp)
 if __name__ == "__main__":
     print("🚀 Server running at: http://127.0.0.1:5000")
     socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+
 
 
 
