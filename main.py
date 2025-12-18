@@ -659,7 +659,15 @@ app.register_blueprint(call_bp)
 
 if __name__ == "__main__":
     print("🚀 Server running at: http://127.0.0.1:5000")
-    socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+    socketio.run(
+    app,
+    host="0.0.0.0",
+    port=int(os.environ.get("PORT", 5000)),
+    debug=False,
+    allow_unsafe_werkzeug=True
+)
+
+
 
 
 
