@@ -1,0 +1,37 @@
+<!-- templates/private_modules/watch.html -->
+<div style="padding:12px;color:#fff;">
+  <h3>🎬 Watch Together</h3>
+  <input id="watchUrl" placeholder="YouTube or MP4 URL" style="width:70%"/>
+  <button id="watchLoad">Load & Sync</button>
+  <div style="margin-top:12px;">
+    <video id="watchVideo" controls style="width:100%;max-height:360px;background:#000"></video>
+  </div>
+
+  <script>
+    function init_private_module_watch() {
+      const load = document.getElementById("watchLoad");
+      const urlEl = document.getElementById("watchUrl");
+      const video = document.getElementById("watchVideo");
+
+      load.onclick = () => {
+        const url = urlEl.value.trim();
+        if (!url) return alert("Enter URL");
+        // notify server & room to set the URL (you should implement server handling if needed)
+        socket.emit("private:module:start", {conv_id, module:"watch", url});
+        // locally load
+        video.src = url;
+        video.play();
+      };
+
+      // react to other peers' play/pause/seek
+      window.addEventListener("watch:play", (e) => video.play());
+      window.addEventListener("watch:pause", (e) => video.pause());
+      window.addEventListener("watch:seek", (e) => { video.currentTime = e.detail.timestamp; });
+
+      // on local play/pause/seek -> emit events so server will broadcast
+      video.addEventListener("play", () => socket.emit("watch:play", {conv_id}));
+      video.addEventListener("pause", () => socket.emit("watch:pause", {conv_id}));
+      video.addEventListener("seeked", () => socket.emit("watch:seek", {conv_id, timestamp: video.currentTime}));
+    }
+  </script>
+</div>

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChatterBox - Chat with {{ other.name }}</title>
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Chat CSS -->
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='css/chat.css') }}">
+</head>
+
+<body>
+
+<div class="app-header">
+  <i class="fa-solid fa-comments"></i> ChatterBox
+</div>
+
+<div class="chat-container">
+
+  <div class="chat-header">
+    <span>Chat with {{ other.name }}</span>
+
+    <div class="chat-actions">
+      <!-- 📞 VIDEO CALL -->
+      <button id="callBtn" title="Video Call">
+        <i class="fa-solid fa-video"></i>
+      </button>
+
+      <!-- 📰 NEWS -->
+      <button id="newsBtn" title="Polimer News Live">
+        <i class="fa-solid fa-newspaper"></i>
+      </button>
+    </div>
+  </div>
+
+  <div id="typing-indicator"></div>
+  <div id="messages"></div>
+
+  <button id="aiFloatingBtn">🤖</button>
+
+  <div class="input-area">
+    <input id="msg" type="text" placeholder="Write a message...">
+    <input id="file" type="file">
+    <button id="send">Send</button>
+    <button id="privateRoomBtn">🔐 Room</button>
+  </div>
+</div>
+
+<!-- 📞 INCOMING CALL POPUP -->
+<div id="incomingCall" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;">
+  <div style="
+    background:#fff;
+    padding:22px;
+    border-radius:14px;
+    text-align:center;
+    width:260px;">
+    <h3>📞 Incoming Video Call</h3>
+    <p id="callerStatus"></p>
+    <button onclick="acceptCall()">Accept</button>
+    <button onclick="rejectCall()">Reject</button>
+  </div>
+</div>
+
+<script>
+  const CURRENT_USER_ID = {{ current_user.id }};
+  const OTHER_ID = {{ other.id }};
+</script>
+
+<!-- EXISTING CHAT -->
+<script src="{{ url_for('static', filename='js/chat.js') }}" defer></script>
+
+<!-- AI -->
+{% include "ai_assistant.html" %}
+<script src="{{ url_for('static', filename='js/ai.js') }}" defer></script>
+
+<!-- 📞 CALL SOCKET (ISOLATED) -->
+<script>
+  const callSocket = io();
+  let callRoom = null;
+  let CALL_FROM = null;
+
+  const incomingPopup = document.getElementById("incomingCall");
+
+  // 📞 CALL BUTTON
+  document.getElementById("callBtn").onclick = () => {
+    callRoom = `call_${CURRENT_USER_ID}_${OTHER_ID}`;
+
+    callSocket.emit("start_call", {
+      from: CURRENT_USER_ID,
+      to: OTHER_ID,
+      room: callRoom
+    });
+  };
+
+  // 📲 INCOMING CALL
+  callSocket.on("call:incoming", data => {
+    callRoom = data.room;
+    CALL_FROM = data.from;
+    incomingPopup.style.display = "flex";
+  });
+
+  // ❌ REJECTED / BUSY
+  callSocket.on("call:rejected", () => {
+    alert("❌ User rejected or is busy");
+  });
+
+  // ✅ ACCEPT
+  function acceptCall() {
+    callSocket.emit("call:accept", { room: callRoom });
+
+    window.open(
+      `/call?room=${callRoom}&other=${CALL_FROM}`,
+      "_blank"
+    );
+
+    incomingPopup.style.display = "none";
+  }
+
+  // ❌ REJECT
+  function rejectCall() {
+    callSocket.emit("call:reject", { room: callRoom });
+    incomingPopup.style.display = "none";
+  }
+
+  /* 📰 NEWS */
+  document.getElementById("newsBtn").onclick = () => {
+    window.location.href = "https://www.youtube.com/watch?v=Ei6NUWLQCQM";
+  };
+</script>
+
+</body>
+</html>

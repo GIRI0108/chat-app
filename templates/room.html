@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Private Room</title>
+    <link rel="stylesheet" href="/static/css/room.css">
+</head>
+<body>
+
+<h2>Private Room — Conversation {{ conv_id }}</h2>
+
+<div class="tabs">
+    <button onclick="openTab('games')">🎮 Games</button>
+    <button onclick="openTab('watch')">🎬 Watch Together</button>
+    <button onclick="openTab('music')">🎵 Music</button>
+</div>
+
+<!-- Games -->
+<div id="games" class="tabContent">
+    <h3>Select Game</h3>
+    <button onclick="startGame('tictactoe')">Tic Tac Toe</button>
+    <button onclick="startGame('chess')">Chess</button>
+    <button onclick="startGame('checkers')">Checkers</button>
+
+    <div id="gameBoard"></div>
+</div>
+
+<!-- Watch Together -->
+<div id="watch" class="tabContent">
+    <h3>Watch Together</h3>
+    <input id="videoUrl" placeholder="Paste video URL">
+    <button onclick="loadVideo()">Load Video</button>
+
+    <video id="watchPlayer" width="700" controls></video>
+</div>
+
+<!-- Music Player -->
+<div id="music" class="tabContent">
+    <h3>Music Sync</h3>
+    <input id="musicUrl" placeholder="Paste music/mp3 URL">
+    <button onclick="loadTrack()">Load Track</button>
+
+    <audio id="musicPlayer" controls></audio>
+</div>
+
+<script>
+    var conv_id = {{ conv_id }};
+</script>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/static/js/tictactoe.js"></script>
+<script src="/static/js/chess.js"></script>
+<script src="/static/js/checkers.js"></script>
+<script src="/static/js/watch_together.js"></script>
+<script src="/static/js/music_sync.js"></script>
+</body>
+</html>

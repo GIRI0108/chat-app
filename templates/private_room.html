@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Private Room</title>
+  <link rel="stylesheet"
+    href="{{ url_for('static', filename='css/private_room.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+  <h1>🔐 Private Room</h1>
+
+  <div class="box">
+    <h2>Create Room</h2>
+    <input id="createCode" maxlength="6"
+      placeholder="Enter 6-digit code">
+    <button onclick="createRoom()">Create</button>
+  </div>
+
+  <div class="box">
+    <h2>Join Room</h2>
+    <input id="joinCode" maxlength="6"
+      placeholder="Enter room code">
+    <button onclick="joinRoom()">Join</button>
+  </div>
+</div>
+
+<script>
+const socket = io();
+
+const ROOM_KEY = "{{ room_key }}";  // backend render pannanum
+
+// 🔐 JOIN PRIVATE ROOM
+socket.emit("private:join", {
+  room_key: ROOM_KEY
+});
+
+// optional: show users count
+socket.on("private:user_count", data => {
+  console.log("Users in room:", data.count);
+  console.log("Host id:", data.host);
+});
+</script>
+
+
+<script src="{{ url_for('static', filename='js/private_room.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎬 Watch Together</title>
+
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <!-- YouTube API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #fff;
+    }
+
+    /* ---------- SIDEBAR ---------- */
+    .sidebar {
+      width: 320px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      backdrop-filter: blur(10px);
+    }
+
+    .sidebar h2 {
+      margin: 0;
+      text-align: center;
+    }
+
+    .room {
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    label {
+      font-size: 13px;
+      opacity: 0.85;
+    }
+
+    input[type="file"],
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background: #ff4b2b;
+      background: linear-gradient(to right, #ff416c, #ff4b2b);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: scale(1.03);
+      opacity: 0.95;
+    }
+
+    /* ---------- PLAYER AREA ---------- */
+    .player-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: black;
+      position: relative;
+    }
+
+    video {
+      max-width: 95%;
+      max-height: 95%;
+      display: none;
+      background: black;
+    }
+
+    #yt-container {
+      width: 95%;
+      height: 95%;
+      display: none;
+    }
+
+    .hint {
+      position: absolute;
+      bottom: 15px;
+      font-size: 12px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar">
+  <h2>🎬 Watch Together</h2>
+  <div class="room">Room: <b>{{ room_key }}</b></div>
+
+  <label>📁 Upload MP4 (local)</label>
+  <input type="file" id="localFile" accept="video/mp4">
+
+  <label>🌐 MP4 URL</label>
+  <input type="text" id="mp4Url" placeholder="https://site/video.mp4">
+
+  <label>▶ YouTube URL</label>
+  <input type="text" id="ytUrl" placeholder="https://youtube.com/watch?v=...">
+
+  <button onclick="loadVideo()">Load & Sync</button>
+</div>
+
+<!-- ===== PLAYER AREA ===== -->
+<div class="player-area">
+  <video id="video" controls></video>
+  <div id="yt-container"></div>
+  <div class="hint">Host controls are synced to all users</div>
+</div>
+<script>
+let ytReady = false;
+function onYouTubeIframeAPIReady() {
+  ytReady = true;
+}
+</script>
+
+<script>
+/* ==========================================================
+   BASIC SETUP
+========================================================== */
+const socket = io();
+const ROOM_KEY = "{{ room_key }}";
+
+socket.emit("private:join", { room_key: ROOM_KEY });
+
+const video = document.getElementById("video");
+const ytContainer = document.getElementById("yt-container");
+
+let mode = null;            // "local" | "youtube"
+let ytPlayer = null;
+let ignoreYT = false;
+
+/* ==========================================================
+   LOAD VIDEO (HOST)
+========================================================== */
+function loadVideo() {
+  const file = document.getElementById("localFile").files[0];
+  const mp4Url = document.getElementById("mp4Url").value.trim();
+  const ytUrl = document.getElementById("ytUrl").value.trim();
+
+  if (file) {
+    const blob = URL.createObjectURL(file);
+    setLocalVideo(blob);
+
+    socket.emit("watch:load", {
+      room_key: ROOM_KEY,
+      mode: "local",
+      url: blob
+    });
+
+  } else if (mp4Url.endsWith(".mp4")) {
+    setLocalVideo(mp4Url);
+
+    socket.emit("watch:load", {
+      room_key: ROOM_KEY,
+      mode: "local",
+      url: mp4Url
+    });
+
+  } else if (ytUrl) {
+    const id = extractYouTubeID(ytUrl);
+    if (!id) {
+      alert("Invalid YouTube URL");
+      return;
+    }
+
+    setYoutubeVideo(id);
+
+    socket.emit("watch:load", {
+      room_key: ROOM_KEY,
+      mode: "youtube",
+      video_id: id
+    });
+
+  } else {
+    alert("Please upload or paste a valid video");
+  }
+}
+
+/* ==========================================================
+   UI HELPERS
+========================================================== */
+function setLocalVideo(src) {
+  mode = "local";
+  ytContainer.style.display = "none";
+  video.style.display = "block";
+  video.src = src;
+  video.load();
+}
+
+function setYoutubeVideo(videoId) {
+  mode = "youtube";
+
+  video.style.display = "none";
+  ytContainer.style.display = "block";
+
+  const wait = setInterval(() => {
+    if (!window.YT || !YT.Player) return;
+
+    clearInterval(wait);
+
+    if (ytPlayer) {
+      ytPlayer.loadVideoById(videoId);
+      ytPlayer.mute();          // 🔥 IMPORTANT
+      ytPlayer.playVideo();     // 🔥 IMPORTANT
+      return;
+    }
+
+    ytPlayer = new YT.Player("yt-container", {
+      width: "100%",
+      height: "100%",
+      videoId: videoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 1,
+        mute: 1               // 🔥 IMPORTANT
+      },
+      events: {
+        onReady: e => {
+          e.target.mute();     // 🔥 REQUIRED
+          e.target.playVideo();
+        },
+        onStateChange: onYTStateChange
+      }
+    });
+  }, 100);
+}
+
+
+
+/* ==========================================================
+   YOUTUBE UTIL
+========================================================== */
+function extractYouTubeID(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com"))
+      return u.searchParams.get("v");
+    if (u.hostname.includes("youtu.be"))
+      return u.pathname.substring(1);
+  } catch {
+    return null;
+  }
+}
+
+/* ==========================================================
+   LOCAL VIDEO EVENTS
+========================================================== */
+video.addEventListener("play", () => {
+  if (mode === "local") {
+    socket.emit("watch:play", {
+      room_key: ROOM_KEY,
+      time: video.currentTime
+    });
+  }
+});
+
+video.addEventListener("pause", () => {
+  if (mode === "local") {
+    socket.emit("watch:pause", {
+      room_key: ROOM_KEY,
+      time: video.currentTime
+    });
+  }
+});
+
+video.addEventListener("seeked", () => {
+  if (mode === "local") {
+    socket.emit("watch:seek", {
+      room_key: ROOM_KEY,
+      time: video.currentTime
+    });
+  }
+});
+
+/* ==========================================================
+   YOUTUBE EVENTS
+========================================================== */
+function onYTStateChange(e) {
+  if (ignoreYT) return;
+
+  const time = ytPlayer.getCurrentTime();
+
+  if (e.data === YT.PlayerState.PLAYING) {
+    socket.emit("watch:play", { room_key: ROOM_KEY, time });
+  }
+
+  if (e.data === YT.PlayerState.PAUSED) {
+    socket.emit("watch:pause", { room_key: ROOM_KEY, time });
+  }
+}
+
+/* ==========================================================
+   SOCKET RECEIVERS (ALL USERS)
+========================================================== */
+("watch:load", data => {
+  if (data.mode === "local") {
+    setLocalVideo(data.url);
+    setTimeout(() => video.play(), 300);
+  }socket.on
+
+  if (data.mode === "youtube") {
+    setYoutubeVideo(data.video_id);
+  }
+});
+
+
+socket.on("watch:play", d => {
+  if (mode === "local") {
+    video.currentTime = d.time;
+    video.play();
+  }
+
+  if (mode === "youtube" && ytPlayer) {
+    ignoreYT = true;
+    ytPlayer.seekTo(d.time, true);
+    ytPlayer.playVideo();
+    setTimeout(() => ignoreYT = false, 400);
+  }
+});
+
+socket.on("watch:pause", d => {
+  if (mode === "local") {
+    video.currentTime = d.time;
+    video.pause();
+  }
+
+  if (mode === "youtube" && ytPlayer) {
+    ignoreYT = true;
+    ytPlayer.pauseVideo();
+    setTimeout(() => ignoreYT = false, 400);
+  }
+});
+
+socket.on("watch:seek", d => {
+  if (mode === "local") {
+    video.currentTime = d.time;
+  }
+});
+</script>
+
+</body>
+</html>

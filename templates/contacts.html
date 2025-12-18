@@ -1,0 +1,243 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>ChatterBox - Contacts</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    /* ====== GLOBAL STYLES ====== */
+    * {
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #f9fafe 0%, #e6f0ff 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: #1b1b1b;
+    }
+
+    /* ====== MAIN CONTAINER ====== */
+    .contacts-container {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      width: 400px;
+      padding: 30px;
+      transition: all 0.3s ease;
+    }
+
+    .contacts-container:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    /* ====== HEADER ====== */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    .app-header i {
+      color: #25d366;
+      font-size: 28px;
+    }
+
+    .app-header h1 {
+      margin: 0;
+      font-size: 26px;
+      font-weight: 700;
+      color: #1b1b1b;
+      letter-spacing: 0.5px;
+    }
+
+    /* ====== TITLE ====== */
+    h2 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #1b1b1b;
+    }
+
+    /* ====== ADD CONTACT ====== */
+    .add-contact {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .add-contact input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 1px solid #d0d7e2;
+      border-radius: 10px;
+      background: #f9fafb;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .add-contact input:focus {
+      border-color: #25d366;
+      outline: none;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.2);
+    }
+
+    .add-contact button {
+      background: #25d366;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.1s ease;
+    }
+
+    .add-contact button:hover {
+      background: #1ebe5d;
+    }
+
+    .add-contact button:active {
+      transform: scale(0.98);
+    }
+
+    /* ====== CONTACT LIST ====== */
+    ul#contacts {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    ul#contacts li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f9fafb;
+      margin-bottom: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+    }
+
+    ul#contacts li:hover {
+      background: #e6f7ed;
+      transform: translateY(-2px);
+    }
+
+    ul#contacts a {
+      color: #1b1b1b;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 15px;
+    }
+
+    ul#contacts a:hover {
+      color: #25d366;
+    }
+
+    ul#contacts strong {
+      color: #25d366;
+      font-size: 13px;
+    }
+
+    ul#contacts em {
+      color: #999;
+      font-size: 13px;
+    }
+
+    /* ====== FOOTER ====== */
+    .logout-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #128c7e;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .logout-link:hover {
+      text-decoration: underline;
+    }
+
+    /* ====== RESPONSIVE ====== */
+    @media (max-width: 480px) {
+      .contacts-container {
+        width: 90%;
+        padding: 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="contacts-container">
+    <div class="app-header">
+      <i class="fa-solid fa-comments"></i>
+      <h1>ChatterBox</h1>
+    </div>
+
+    <h2>Contacts</h2>
+
+    <div class="add-contact">
+      <input id="new_contact" placeholder="Phone or Email to add"/>
+      <button id="add_btn">Add</button>
+    </div>
+
+    <ul id="contacts"></ul>
+
+    <a href="{{ url_for('logout') }}" class="logout-link">Logout</a>
+  </div>
+
+  <script>
+    const socket = io({ transports: ['websocket'], autoConnect: true });
+
+    socket.on('connect', ()=> {
+      console.log('connected', socket.id);
+      socket.emit('get_contacts');
+    });
+
+    socket.on('contacts_list', (list) => {
+      const ul = document.getElementById('contacts');
+      ul.innerHTML = '';
+      list.forEach(c => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <a href="/chat/${c.id}">
+            <i class="fa-solid fa-user"></i> ${c.name} (${c.contact})
+          </a>
+          ${c.online ? '<strong>Online</strong>' : '<em>Offline</em>'}
+        `;
+        ul.appendChild(li);
+      });
+    });
+
+    document.getElementById('add_btn').addEventListener('click', async () => {
+      const val = document.getElementById('new_contact').value;
+      if (!val) return;
+      const res = await fetch('/api/add_contact', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({contact: val})
+      });
+      const j = await res.json();
+      if (j.error) { alert(j.error); return; }
+      socket.emit('get_contacts');
+      document.getElementById('new_contact').value = '';
+    });
+  </script>
+</body>
+</html>

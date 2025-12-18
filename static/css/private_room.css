@@ -1,0 +1,39 @@
+body {
+  background: linear-gradient(135deg,#141e30,#243b55);
+  font-family: Arial;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+.container {
+  text-align: center;
+}
+
+.box {
+  background: rgba(255,255,255,0.1);
+  padding: 25px;
+  margin: 20px;
+  border-radius: 15px;
+  width: 280px;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+}
+
+button {
+  width: 100%;
+  margin-top: 15px;
+  padding: 12px;
+  background: #00d2ff;
+  border: none;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}

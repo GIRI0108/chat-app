@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Listen With Me</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+
+<body style="background:#1a1a2e;color:white;text-align:center">
+
+<h1>🎵 Listen With Me</h1>
+<h3>Room: {{ room_code }}</h3>
+
+<input type="file" id="audioFile" accept="audio/*"><br><br>
+<input type="text" id="audioUrl" placeholder="Paste audio URL"><br><br>
+
+<button onclick="loadAudio()">Load Music</button>
+
+<br><br>
+<audio id="audio" controls></audio>
+
+<script src="/static/js/music_sync.js"></script>
+<script>
+  const ROOM = "{{ room_code }}";
+</script>
+<script>
+const socket = io();
+const audio = document.getElementById("audio");
+const ROOM_KEY = "{{ room_key }}";
+
+// ▶ PLAY
+audio.addEventListener("play", () => {
+  socket.emit("music:play", {
+    room_key: ROOM_KEY,
+    time: audio.currentTime
+  });
+});
+
+// ⏸ PAUSE
+audio.addEventListener("pause", () => {
+  socket.emit("music:pause", {
+    room_key: ROOM_KEY,
+    time: audio.currentTime
+  });
+});
+
+// ⏩ SEEK
+audio.addEventListener("seeked", () => {
+  socket.emit("music:seek", {
+    room_key: ROOM_KEY,
+    time: audio.currentTime
+  });
+});
+
+// 👥 RECEIVERS
+socket.on("music:play", data => {
+  audio.currentTime = data.time;
+  audio.play();
+});
+
+socket.on("music:pause", data => {
+  audio.currentTime = data.time;
+  audio.pause();
+});
+
+socket.on("music:seek", data => {
+  audio.currentTime = data.time;
+});
+</script>
+
+</body>
+</html>
