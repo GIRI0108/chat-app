@@ -7,12 +7,14 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.utils import secure_filename
+from openai import OpenAI
 from dotenv import load_dotenv
 import random
-import openai
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+import eventlet
+eventlet.monkey_patch()
 load_dotenv()
 
 from routes.ai_routes import ai_bp
@@ -32,9 +34,12 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024  # 30MB
 
-openai.api_key = os.getenv("AI_API_KEY")
+client = OpenAI(api_key=os.getenv("AI_API_KEY"))
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI', 'postgresql://postgres:admin@localhost:5433/app_1')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg://postgres:admin@localhost:5433/app_1'
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 800 * 1024 * 1024
@@ -647,3 +652,4 @@ app.register_blueprint(call_bp)
 if __name__ == "__main__":
     print("🚀 Server running at: http://127.0.0.1:5000")
     socketio.run(app, host="127.0.0.1", port=5000, debug=True)
+
